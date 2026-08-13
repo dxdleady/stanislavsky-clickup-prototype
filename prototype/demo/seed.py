@@ -13,6 +13,7 @@ from adapters.clickup import ClickUpTrackerAdapter
 from agents.live_demo_agent import AGENT_LABEL
 from core.config import settings
 from core.state_machine import COSTUME_PIPELINE
+from demo.preflight import check_list_statuses
 from demo.statuses import ACTIVE_TASK_LABELS, SEED_COMMENTS, TASK_OWNERS, TASK_STARTING_STAGE
 
 TASK_MAP_PATH = Path(__file__).parent / "task_map.json"
@@ -21,6 +22,9 @@ TASK_MAP_PATH = Path(__file__).parent / "task_map.json"
 def main() -> None:
     tracker = ClickUpTrackerAdapter(token=settings.require("clickup_token"), workflow=COSTUME_PIPELINE)
     list_id = settings.require("clickup_list_id")
+
+    # Fail fast здесь, а не глубоко внутри create_task/set_status — see demo/preflight.py.
+    check_list_statuses(tracker, list_id)
 
     print("Удаляю старые демо-задачи...")
     for task in tracker.list_demo_tasks(list_id):

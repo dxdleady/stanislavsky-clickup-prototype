@@ -177,6 +177,15 @@ class ClickUpTrackerAdapter:
     def list_demo_tasks(self, list_id: str) -> list[dict[str, Any]]:
         return [t for t in self.list_tasks(list_id) if t.get("name", "").startswith(DEMO_PREFIX)]
 
+    def get_list_statuses(self, list_id: str) -> list[str]:
+        """Отображаемые имена кастомных статусов, реально настроенных на List —
+        источник данных для demo/preflight.py (сверяет их с WorkflowConfig ДО
+        того, как seed.py тронет доску; статусы нельзя создать через API, см.
+        docs/03_clickup_requirements.md §4, только прочитать)."""
+        r = self._client.get(f"/list/{list_id}")
+        r.raise_for_status()
+        return [s["status"] for s in r.json().get("statuses", [])]
+
     def get_authorized_user(self) -> dict[str, Any]:
         r = self._client.get("/user")
         r.raise_for_status()
