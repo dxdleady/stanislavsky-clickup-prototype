@@ -1,0 +1,3196 @@
+{
+  "meta": {
+    "name": "Stanislavsky × ClickUp — демо-стенд костюмного цеха",
+    "version": "2.0",
+    "supersedes": "1.0",
+    "timezone": "+03:00",
+    "project": "«Тихий берег», полный метр",
+    "periods": {
+      "prep": {
+        "from": "2026-08-03",
+        "to": "2026-08-10",
+        "label": "Подготовительный период"
+      },
+      "eve_before": {
+        "date": "2026-08-11",
+        "label": "Канун съёмочного дня — выпуск вызывного листа"
+      },
+      "shoot": {
+        "date": "2026-08-12",
+        "label": "СД-04",
+        "call_general": "08:30",
+        "call_costume": "07:00",
+        "wrap": "18:00"
+      }
+    },
+    "process_invariants": [
+      "Художник по костюмам сообщает срок готовности; дату в календарь ставит первый ассистент.",
+      "Художник подаёт смету; режет и утверждает продюсер.",
+      "Первый ассистент предъявляет варианты; деньги тратит продюсер.",
+      "Вызывной лист выпускается накануне вечером, после подтверждения готовности цехов.",
+      "Подтверждение готовности бинарно: готов / не готов + причина + срок. Формулировки вида «постараемся» невалидны.",
+      "Сцены одного сценарного дня обязаны иметь идентичное состояние костюма независимо от съёмочного дня.",
+      "После примерки перемена фиксируется; изменение — новая процедура, а не правка."
+    ]
+  },
+  "accounts": {
+    "agents": [
+      {
+        "id": "producer",
+        "display_name": "Продюсер · Stanislavsky",
+        "email": "producer@agents.stanislavsky.ai",
+        "role_ru": "Продюсер",
+        "training_version": "v2.4",
+        "workload": 4,
+        "color": "#E0863C",
+        "seat": "free_guest",
+        "owns": [
+          "бриф",
+          "смета цехов",
+          "порог стоимости",
+          "утверждение КПП",
+          "приёмка"
+        ],
+        "cannot": [
+          "назначать даты",
+          "выбирать оптику",
+          "править костюмный плот"
+        ],
+        "triggers": [
+          "поступила смета",
+          "оценка выше порога",
+          "готовый результат",
+          "доп. расход"
+        ],
+        "clickup_permissions": {
+          "fields_write": [
+            "cost_threshold",
+            "prompt"
+          ],
+          "statuses_write": [
+            "cost_approval",
+            "accepted"
+          ]
+        }
+      },
+      {
+        "id": "first_ad",
+        "display_name": "Первый ассистент · Stanislavsky",
+        "email": "first.ad@agents.stanislavsky.ai",
+        "role_ru": "Первый ассистент режиссёра",
+        "training_version": "v3.1",
+        "workload": 9,
+        "color": "#8B84E8",
+        "seat": "free_guest",
+        "owns": [
+          "КПП",
+          "вызывной лист",
+          "порядок съёмки",
+          "очередь",
+          "дедлайны",
+          "переназначение"
+        ],
+        "cannot": [
+          "тратить деньги",
+          "править бриф",
+          "менять состав перемены"
+        ],
+        "triggers": [
+          "расписание 07:00 и 17:30",
+          "смена статуса",
+          "истёкший дедлайн",
+          "флаг неготовности цеха"
+        ],
+        "clickup_permissions": {
+          "fields_write": [
+            "story_day",
+            "characters",
+            "reply_deadline",
+            "shoot_slot"
+          ],
+          "statuses_write": [
+            "ready",
+            "blocked"
+          ]
+        }
+      },
+      {
+        "id": "costume",
+        "display_name": "Художник по костюмам · Disciple_Volkova",
+        "email": "costume.volkova@agents.stanislavsky.ai",
+        "role_ru": "Художник по костюмам",
+        "owner_human": "художник по костюмам-создатель",
+        "training_version": "v3.2",
+        "workload": 6,
+        "color": "#D96A9A",
+        "seat": "free_guest",
+        "owns": [
+          "костюмный плот",
+          "перемены",
+          "дубли",
+          "состояния износа",
+          "wardrobe_ref",
+          "длительность перемены"
+        ],
+        "cannot": [
+          "назначать съёмочные даты",
+          "утверждать собственный бюджет",
+          "предлагать перестановку сцен"
+        ],
+        "triggers": [
+          "получен постановочный лист",
+          "решение по смете",
+          "выпущен вызывной лист",
+          "approve стоимости",
+          "Regenerate",
+          "флаг Continuity"
+        ],
+        "clickup_permissions": {
+          "fields_write": [
+            "change_no",
+            "costume_state",
+            "wardrobe_ref",
+            "wardrobe_ready_at",
+            "change_duration_min"
+          ],
+          "statuses_write": [
+            "wardrobe_check",
+            "in_generation"
+          ]
+        }
+      }
+    ],
+    "humans": [
+      {
+        "id": "timur",
+        "display_name": "Тимур",
+        "role_ru": "Финальный одобряющий",
+        "scope": [
+          "approve расходов выше порога",
+          "выбор между вариантами первого ассистента"
+        ],
+        "color": "#9A9A9A"
+      },
+      {
+        "id": "supervisor",
+        "display_name": "Супервайзер",
+        "role_ru": "Супервайзер площадки",
+        "scope": [
+          "Accepted / Regenerate",
+          "правка полей брифа",
+          "@-упоминание агента"
+        ],
+        "color": "#8A8A8A"
+      }
+    ],
+    "mentioned_agents": [
+      {
+        "id": "director",
+        "display_name": "Director · Stanislavsky",
+        "scope": "утверждение эскизов и трактовки сцены",
+        "detail": "вне рамок демо"
+      },
+      {
+        "id": "prod_designer",
+        "display_name": "Художник-постановщик · Stanislavsky",
+        "scope": "общая палитра, согласование по фактуре и цвету",
+        "detail": "вне рамок демо"
+      },
+      {
+        "id": "camera",
+        "display_name": "Camera · Stanislavsky",
+        "scope": "проба костюма на камеру, поведение фактуры в оптике",
+        "detail": "вне рамок демо"
+      },
+      {
+        "id": "makeup",
+        "display_name": "Грим · Stanislavsky",
+        "scope": "согласование состояний по персонажу и сценарному дню",
+        "detail": "вне рамок демо"
+      },
+      {
+        "id": "continuity",
+        "display_name": "Continuity · QC",
+        "scope": "флаги расхождений со ссылкой на конфликтующий шот",
+        "detail": "участвует репликами, внутренняя логика вне рамок демо"
+      },
+      {
+        "id": "actor_disciple",
+        "display_name": "Actor · Disciple_Ivanov",
+        "scope": "генерация",
+        "detail": "участвует репликами"
+      },
+      {
+        "id": "cost",
+        "display_name": "Cost · Stanislavsky",
+        "scope": "оценка стоимости до запуска",
+        "detail": "участвует репликами"
+      },
+      {
+        "id": "conductor",
+        "display_name": "Conductor · Stanislavsky",
+        "scope": "очередь производства",
+        "detail": "вне рамок демо"
+      }
+    ]
+  },
+  "workspace": {
+    "space": "Stanislavsky · «Тихий берег»",
+    "folders": [
+      {
+        "id": "f_prep",
+        "name": "Подготовительный период",
+        "lists": [
+          "prep_costume",
+          "prep_schedule"
+        ]
+      },
+      {
+        "id": "f_shoot",
+        "name": "Съёмочный период",
+        "lists": [
+          "ep01"
+        ]
+      }
+    ],
+    "lists": [
+      {
+        "id": "prep_costume",
+        "name": "Костюмный цех — разработка"
+      },
+      {
+        "id": "prep_schedule",
+        "name": "КПП и график"
+      },
+      {
+        "id": "ep01",
+        "name": "Эпизод 1 — сцены"
+      }
+    ],
+    "chat_channels": [
+      {
+        "id": "production_daily",
+        "name": "#production-daily",
+        "purpose": "вызывной лист, дайджесты, эскалации",
+        "members": [
+          "first_ad",
+          "producer",
+          "costume",
+          "timur",
+          "supervisor"
+        ]
+      },
+      {
+        "id": "costume_dept",
+        "name": "#costume",
+        "purpose": "цеховая переписка, комплектация",
+        "members": [
+          "costume",
+          "first_ad"
+        ]
+      },
+      {
+        "id": "money",
+        "name": "#money",
+        "purpose": "payment-workflow, пороги",
+        "members": [
+          "producer",
+          "timur"
+        ]
+      }
+    ],
+    "views": [
+      {
+        "id": "v_waiting",
+        "name": "Ждут человека",
+        "filter": "waiting_for_human = true",
+        "purpose": "метрика простоя"
+      },
+      {
+        "id": "v_wardrobe",
+        "name": "Готовность перемен",
+        "group_by": "wardrobe_ready_at",
+        "purpose": "ограничение для КПП"
+      },
+      {
+        "id": "v_storyday",
+        "name": "По сценарным дням",
+        "group_by": "story_day",
+        "purpose": "контроль костюмной непрерывности"
+      },
+      {
+        "id": "v_workload",
+        "name": "Workload агентов",
+        "purpose": "агенты видны наравне с людьми"
+      }
+    ]
+  },
+  "statuses": [
+    {
+      "id": "backlog",
+      "name": "Backlog",
+      "waits_for_human": false,
+      "silence_policy": null
+    },
+    {
+      "id": "ready",
+      "name": "Ready for Director",
+      "waits_for_human": false,
+      "silence_policy": null
+    },
+    {
+      "id": "wardrobe_check",
+      "name": "Wardrobe Check",
+      "waits_for_human": false,
+      "silence_policy": null
+    },
+    {
+      "id": "coverage_review",
+      "name": "Coverage Review",
+      "waits_for_human": true,
+      "silence_policy": "рекомендация агента через 30 мин"
+    },
+    {
+      "id": "cost_approval",
+      "name": "Cost Approval",
+      "waits_for_human": true,
+      "silence_policy": "пауза, деньги без человека не тратятся"
+    },
+    {
+      "id": "in_generation",
+      "name": "In Generation",
+      "waits_for_human": false,
+      "silence_policy": null
+    },
+    {
+      "id": "qc",
+      "name": "QC",
+      "waits_for_human": false,
+      "silence_policy": null
+    },
+    {
+      "id": "regenerate",
+      "name": "Regenerate",
+      "waits_for_human": true,
+      "silence_policy": "рекомендация агента через 20 мин"
+    },
+    {
+      "id": "accepted",
+      "name": "Accepted",
+      "waits_for_human": false,
+      "silence_policy": null
+    },
+    {
+      "id": "blocked",
+      "name": "Blocked",
+      "waits_for_human": true,
+      "silence_policy": "эскалация в #production-daily каждые 4 ч"
+    }
+  ],
+  "custom_fields": [
+    {
+      "key": "story_day",
+      "label": "Сценарный день",
+      "type": "dropdown",
+      "options": [
+        "SD-01",
+        "SD-02",
+        "SD-03",
+        "SD-04"
+      ],
+      "write": [
+        "first_ad"
+      ]
+    },
+    {
+      "key": "characters",
+      "label": "Персонажи в кадре",
+      "type": "labels",
+      "write": [
+        "first_ad"
+      ]
+    },
+    {
+      "key": "change_no",
+      "label": "Перемена",
+      "type": "text",
+      "write": [
+        "costume"
+      ]
+    },
+    {
+      "key": "costume_state",
+      "label": "Состояние костюма",
+      "type": "dropdown",
+      "options": [
+        "чистый",
+        "грязный",
+        "мокрый",
+        "порванный",
+        "мокрый+грязный",
+        "порванный+грязный"
+      ],
+      "write": [
+        "costume"
+      ]
+    },
+    {
+      "key": "wardrobe_ref",
+      "label": "Wardrobe ref",
+      "type": "url",
+      "write": [
+        "costume",
+        "supervisor"
+      ],
+      "lock_rule": "запирается после примерки; правка супервайзером создаёт новую версию, а не перезаписывает"
+    },
+    {
+      "key": "wardrobe_ready_at",
+      "label": "Готовность перемены",
+      "type": "date",
+      "write": [
+        "costume"
+      ],
+      "constraint": "сцена не может стоять в КПП раньше этой даты"
+    },
+    {
+      "key": "change_duration_min",
+      "label": "Время на перемену, мин",
+      "type": "number",
+      "write": [
+        "costume"
+      ],
+      "note": "элемент расписания, а не пауза"
+    },
+    {
+      "key": "doubles_available",
+      "label": "Дублей в наличии",
+      "type": "number",
+      "write": [
+        "costume"
+      ]
+    },
+    {
+      "key": "shoot_slot",
+      "label": "Слот в дне",
+      "type": "datetime",
+      "write": [
+        "first_ad"
+      ]
+    },
+    {
+      "key": "prompt",
+      "label": "Prompt",
+      "type": "long_text",
+      "write": [
+        "supervisor",
+        "producer"
+      ]
+    },
+    {
+      "key": "reference",
+      "label": "Reference",
+      "type": "url",
+      "write": [
+        "supervisor"
+      ]
+    },
+    {
+      "key": "version",
+      "label": "Версия",
+      "type": "text",
+      "write": [],
+      "source": "Stanislavsky"
+    },
+    {
+      "key": "seed",
+      "label": "Сид",
+      "type": "text",
+      "write": [],
+      "source": "Stanislavsky"
+    },
+    {
+      "key": "model",
+      "label": "Модель",
+      "type": "text",
+      "write": [],
+      "source": "Stanislavsky"
+    },
+    {
+      "key": "cost_estimate",
+      "label": "Оценка, ₽",
+      "type": "currency",
+      "write": [],
+      "source": "Stanislavsky"
+    },
+    {
+      "key": "cost_actual",
+      "label": "Факт, ₽",
+      "type": "currency",
+      "write": [],
+      "source": "Stanislavsky"
+    },
+    {
+      "key": "cost_threshold",
+      "label": "Порог, ₽",
+      "type": "currency",
+      "write": [
+        "producer"
+      ],
+      "default": 50000
+    },
+    {
+      "key": "waiting_for_human",
+      "label": "Ждёт человека",
+      "type": "checkbox",
+      "write": [],
+      "source": "производный от статуса"
+    },
+    {
+      "key": "reply_deadline",
+      "label": "Дедлайн ответа",
+      "type": "datetime",
+      "write": [
+        "first_ad"
+      ]
+    },
+    {
+      "key": "lead_agent",
+      "label": "Ведущий агент сцены",
+      "type": "user",
+      "write": [
+        "first_ad"
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "vera",
+      "name": "Вера",
+      "note": "сквозная линия, максимум перемен"
+    },
+    {
+      "id": "arkady",
+      "name": "Аркадий"
+    },
+    {
+      "id": "sonya",
+      "name": "Соня"
+    },
+    {
+      "id": "nina",
+      "name": "Нина"
+    }
+  ],
+  "story_days": [
+    {
+      "id": "SD-01",
+      "note": "утро, до ссоры",
+      "scenes": [
+        "SC-041/02"
+      ]
+    },
+    {
+      "id": "SD-02",
+      "note": "тот же день, вечер",
+      "scenes": [
+        "SC-039/03",
+        "SC-040/05",
+        "SC-042/07",
+        "SC-042/08"
+      ],
+      "continuity_master": "SC-039/03"
+    },
+    {
+      "id": "SD-03",
+      "note": "через сутки, после падения в воду",
+      "scenes": [
+        "SC-042/09",
+        "SC-043/01"
+      ]
+    },
+    {
+      "id": "SD-04",
+      "note": "неделю спустя",
+      "scenes": [
+        "SC-044/01"
+      ]
+    }
+  ],
+  "costume_plot": [
+    {
+      "character": "vera",
+      "change_no": "CH-01",
+      "story_day": "SD-01",
+      "composition": "светлое платье, кардиган, туфли",
+      "doubles_planned": 2,
+      "doubles_final": 1,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-06",
+      "locked_at": "2026-08-07T16:20:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/vera_ch01_v1.png"
+    },
+    {
+      "character": "vera",
+      "change_no": "CH-02",
+      "story_day": "SD-02",
+      "composition": "пальто песочное, шарф в клетку, ботинки",
+      "doubles_planned": 3,
+      "doubles_final": 2,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-07",
+      "locked_at": "2026-08-07T16:20:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/vera_ch02_v1.png",
+      "is_continuity_master": true,
+      "master_shot": "SC-039/03"
+    },
+    {
+      "character": "vera",
+      "change_no": "CH-03",
+      "story_day": "SD-03",
+      "composition": "то же пальто после падения в воду",
+      "doubles_planned": 3,
+      "doubles_final": 3,
+      "states": [
+        "мокрый",
+        "мокрый+грязный",
+        "порванный+грязный"
+      ],
+      "ready_at_original": "2026-08-12",
+      "ready_at_after_cut": "2026-08-14",
+      "ready_at_final": "2026-08-12",
+      "locked_at": null,
+      "wardrobe_ref": null,
+      "note": "срок сдвинут урезанием сметы, возвращён срочным изготовлением"
+    },
+    {
+      "character": "vera",
+      "change_no": "CH-04",
+      "story_day": "SD-04",
+      "composition": "свитер крупной вязки, плед",
+      "doubles_planned": 1,
+      "doubles_final": 1,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-10",
+      "locked_at": "2026-08-10T15:00:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/vera_ch04_v1.png"
+    },
+    {
+      "character": "arkady",
+      "change_no": "CH-01",
+      "story_day": "SD-01",
+      "composition": "рабочая куртка, сапоги",
+      "doubles_planned": 1,
+      "doubles_final": 1,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-06",
+      "locked_at": "2026-08-07T16:20:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/arkady_ch01_v1.png"
+    },
+    {
+      "character": "arkady",
+      "change_no": "CH-02",
+      "story_day": "SD-02",
+      "composition": "свитер, плащ",
+      "doubles_planned": 2,
+      "doubles_final": 2,
+      "doubles_after_damage": 3,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-07",
+      "locked_at": "2026-08-07T16:20:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/arkady_ch02_v1.png"
+    },
+    {
+      "character": "arkady",
+      "change_no": "CH-03",
+      "story_day": "SD-04",
+      "composition": "рубашка, пиджак",
+      "doubles_planned": 1,
+      "doubles_final": 1,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-10",
+      "locked_at": "2026-08-10T15:00:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/arkady_ch03_v1.png"
+    },
+    {
+      "character": "sonya",
+      "change_no": "CH-01",
+      "story_day": "SD-03",
+      "composition": "школьная форма, ранец",
+      "doubles_planned": 1,
+      "doubles_final": 1,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-11",
+      "locked_at": "2026-08-11T12:30:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/sonya_ch01_v1.png"
+    },
+    {
+      "character": "nina",
+      "change_no": "CH-01",
+      "story_day": "SD-02",
+      "composition": "домашнее платье, фартук",
+      "doubles_planned": 1,
+      "doubles_final": 1,
+      "states": [
+        "чистый"
+      ],
+      "ready_at": "2026-08-07",
+      "locked_at": "2026-08-07T16:20:00+03:00",
+      "wardrobe_ref": "s3://wardrobe/nina_ch01_v1.png"
+    }
+  ],
+  "budget": {
+    "submitted": 1480000,
+    "approved": 1150000,
+    "cut": 330000,
+    "lines": [
+      {
+        "line": "Изготовление",
+        "submitted": 620000,
+        "approved": 620000
+      },
+      {
+        "line": "Аренда",
+        "submitted": 180000,
+        "approved": 180000
+      },
+      {
+        "line": "Закупка",
+        "submitted": 240000,
+        "approved": 220000
+      },
+      {
+        "line": "Дубли",
+        "submitted": 290000,
+        "approved": 100000,
+        "consequence": "CH-03 Веры: три дубля износа собираются последовательно"
+      },
+      {
+        "line": "Старение",
+        "submitted": 90000,
+        "approved": 30000,
+        "consequence": "ручное старение заменено генеративным, +1 день на калибровку"
+      },
+      {
+        "line": "Примерки",
+        "submitted": 60000,
+        "approved": 60000
+      }
+    ],
+    "in_day_extras": [
+      {
+        "id": "X1",
+        "ts": "2026-08-12T08:45:00+03:00",
+        "reason": "срочное изготовление CH-03",
+        "amount": 96000,
+        "above_threshold": true,
+        "approved_by": "timur"
+      },
+      {
+        "id": "X2",
+        "ts": "2026-08-12T13:00:00+03:00",
+        "reason": "третий дубль куртки Аркадия CH-02, испорчена на дубле",
+        "amount": 38000,
+        "above_threshold": false,
+        "approved_by": "producer"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "id": "PREP-COSTUME",
+      "list": "prep_costume",
+      "name": "Костюмный цех — разработка и подготовка",
+      "status": "accepted",
+      "assignee": "costume",
+      "watchers": [
+        "first_ad",
+        "producer"
+      ],
+      "state_history": [
+        {
+          "ts": "2026-08-03T10:00:00+03:00",
+          "to": "ready",
+          "by": "first_ad"
+        },
+        {
+          "ts": "2026-08-05T11:20:00+03:00",
+          "to": "cost_approval",
+          "by": "costume"
+        },
+        {
+          "ts": "2026-08-05T12:00:00+03:00",
+          "to": "ready",
+          "by": "producer"
+        },
+        {
+          "ts": "2026-08-07T18:00:00+03:00",
+          "to": "accepted",
+          "by": "producer"
+        }
+      ]
+    },
+    {
+      "id": "SC-039/03",
+      "list": "ep01",
+      "name": "SC-039 / SHOT 03",
+      "status": "accepted",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-02",
+        "characters": [
+          "vera"
+        ],
+        "change_no": "Вера/CH-02",
+        "costume_state": "чистый",
+        "wardrobe_ref": "s3://wardrobe/vera_ch02_v1.png",
+        "version": "v3",
+        "seed": "41207",
+        "model": "gen-v4",
+        "cost_actual": 11400,
+        "doubles_available": 2
+      },
+      "demo_role": "эталон костюмной непрерывности для SD-02, снят 10.08",
+      "state_history": [
+        {
+          "ts": "2026-08-10T14:20:00+03:00",
+          "to": "accepted",
+          "by": "supervisor"
+        }
+      ]
+    },
+    {
+      "id": "SC-041/02",
+      "list": "ep01",
+      "name": "SC-041 / SHOT 02",
+      "status": "blocked",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-01",
+        "characters": [
+          "arkady"
+        ],
+        "change_no": "Аркадий/CH-01",
+        "costume_state": "чистый",
+        "wardrobe_ref": "s3://wardrobe/arkady_ch01_v1.png",
+        "waiting_for_human": true,
+        "reply_deadline": "2026-08-13T12:00:00+03:00"
+      },
+      "block_reason": "продюсер не утвердил правку промпта после смены локации",
+      "demo_role": "висящий блок, наполняет дайджест и метрику простоя",
+      "state_history": [
+        {
+          "ts": "2026-08-11T09:00:00+03:00",
+          "to": "blocked",
+          "by": "first_ad"
+        }
+      ]
+    },
+    {
+      "id": "SC-040/05",
+      "list": "ep01",
+      "name": "SC-040 / SHOT 05",
+      "status": "backlog",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-02",
+        "characters": [
+          "nina",
+          "vera"
+        ],
+        "change_no": "Нина/CH-01, Вера/CH-02",
+        "costume_state": "чистый",
+        "wardrobe_ref": "s3://wardrobe/nina_ch01_v1.png",
+        "change_duration_min": 10,
+        "shoot_slot": "2026-08-12T10:30:00+03:00"
+      },
+      "demo_role": "гладкий проход, даёт объём ленте и фон для конфликтных сцен"
+    },
+    {
+      "id": "SC-042/07",
+      "list": "ep01",
+      "name": "SC-042 / SHOT 07",
+      "status": "ready",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-02",
+        "characters": [
+          "vera",
+          "arkady"
+        ],
+        "change_no": "Вера/CH-02, Аркадий/CH-02",
+        "costume_state": "чистый",
+        "wardrobe_ref": "s3://wardrobe/vera_ch02_v1.png",
+        "change_duration_min": 15,
+        "shoot_slot": "2026-08-12T08:55:00+03:00",
+        "doubles_available": 2
+      },
+      "demo_role": "happy path целиком"
+    },
+    {
+      "id": "SC-042/08",
+      "list": "ep01",
+      "name": "SC-042 / SHOT 08",
+      "status": "backlog",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-02",
+        "characters": [
+          "vera"
+        ],
+        "change_no": "Вера/CH-02",
+        "costume_state": "чистый",
+        "wardrobe_ref": "s3://wardrobe/vera_ch02_v2_alt.png",
+        "change_duration_min": 0,
+        "shoot_slot": "2026-08-12T09:30:00+03:00"
+      },
+      "defect": "в поле стоит альтернативный референс, не эталон SD-02",
+      "demo_role": "нарушение костюмной непрерывности внутри сценарного дня → Regenerate"
+    },
+    {
+      "id": "SC-042/09",
+      "list": "ep01",
+      "name": "SC-042 / SHOT 09",
+      "status": "backlog",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-03",
+        "characters": [
+          "vera"
+        ],
+        "change_no": "Вера/CH-03",
+        "costume_state": "порванный+грязный",
+        "wardrobe_ready_at": "2026-08-14",
+        "change_duration_min": 25,
+        "cost_threshold": 50000
+      },
+      "demo_role": "трёхсторонний узел: неготовность перемены → варианты → деньги"
+    },
+    {
+      "id": "SC-043/01",
+      "list": "ep01",
+      "name": "SC-043 / SHOT 01",
+      "status": "backlog",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-03",
+        "characters": [
+          "sonya"
+        ],
+        "change_no": "Соня/CH-01",
+        "costume_state": "чистый",
+        "wardrobe_ref": "s3://wardrobe/sonya_ch01_v1.png",
+        "shoot_slot": "2026-08-12T12:30:00+03:00"
+      },
+      "demo_role": "сцена, которую двигал бы вариант A; окно актрисы только сегодня"
+    },
+    {
+      "id": "SC-044/01",
+      "list": "ep01",
+      "name": "SC-044 / SHOT 01",
+      "status": "backlog",
+      "assignee": "costume",
+      "lead_agent": "costume",
+      "fields": {
+        "story_day": "SD-04",
+        "characters": [
+          "vera",
+          "arkady"
+        ],
+        "change_no": "Вера/CH-04, Аркадий/CH-03",
+        "costume_state": "чистый",
+        "shoot_slot": "2026-08-13T09:30:00+03:00"
+      },
+      "demo_role": "завтрашний день, попадает в вечерний вызывной лист"
+    }
+  ],
+  "message_types": [
+    {
+      "id": "MT-01",
+      "name": "Постановочный лист и график занятости",
+      "from": "first_ad",
+      "to": "costume",
+      "trigger": "старт подготовительного периода",
+      "payload": [
+        "перечень сцен",
+        "персонажи по сценам",
+        "сценарные дни",
+        "предполагаемый порядок съёмки",
+        "окна занятости актёров"
+      ],
+      "expects": "MT-02",
+      "sla_hours": 48,
+      "visibility": "clickup",
+      "format": "report",
+      "classic": "разработка первого ассистента, от которой работают все цеха"
+    },
+    {
+      "id": "MT-02",
+      "name": "Костюмный плот",
+      "from": "costume",
+      "to": "first_ad",
+      "trigger": "получен MT-01",
+      "payload": [
+        "персонаж × сценарный день × перемена",
+        "состав перемены",
+        "количество дублей",
+        "дата готовности"
+      ],
+      "expects": "MT-03",
+      "visibility": "clickup",
+      "format": "report",
+      "classic": "костюмный плот — базовый документ цеха",
+      "rule": "дата готовности сообщается, но не назначается"
+    },
+    {
+      "id": "MT-03",
+      "name": "Внесение ограничения в КПП",
+      "from": "first_ad",
+      "to": null,
+      "trigger": "получен MT-02",
+      "payload": [
+        "wardrobe_ready_at по каждой перемене"
+      ],
+      "visibility": "clickup",
+      "format": "field_change",
+      "rule": "сцена не может стоять раньше готовности перемены"
+    },
+    {
+      "id": "MT-04",
+      "name": "Смета костюмного цеха",
+      "from": "costume",
+      "to": "producer",
+      "trigger": "плот согласован",
+      "payload": [
+        "постатейная смета",
+        "обоснование по дублям и старению"
+      ],
+      "expects": "MT-05",
+      "sla_hours": 24,
+      "visibility": "clickup",
+      "format": "decision_request"
+    },
+    {
+      "id": "MT-05",
+      "name": "Решение по смете",
+      "from": "producer",
+      "to": "costume",
+      "trigger": "получен MT-04",
+      "payload": [
+        "утверждено / урезано",
+        "суммы по статьям"
+      ],
+      "expects": "MT-06",
+      "visibility": "clickup",
+      "format": "report",
+      "rule": "продюсер режет деньги, но не назначает последствия по срокам"
+    },
+    {
+      "id": "MT-06",
+      "name": "Последствия урезания по готовности",
+      "from": "costume",
+      "to": "first_ad",
+      "trigger": "получен MT-05 с урезанием",
+      "payload": [
+        "перемены с изменённым сроком",
+        "новая дата готовности",
+        "причина"
+      ],
+      "visibility": "clickup",
+      "format": "flag",
+      "rule": "ответ на урезание — перечень последствий, а не спор о деньгах"
+    },
+    {
+      "id": "MT-07",
+      "name": "Заявка на примерку",
+      "from": "costume",
+      "to": "first_ad",
+      "trigger": "перемены изготовлены",
+      "payload": [
+        "персонаж",
+        "перечень перемен",
+        "длительность"
+      ],
+      "expects": "MT-08",
+      "sla_hours": 12,
+      "visibility": "clickup",
+      "format": "decision_request",
+      "classic": "в полной группе принимает второй ассистент; в демо схлопнуто в первого"
+    },
+    {
+      "id": "MT-08",
+      "name": "Окно примерки",
+      "from": "first_ad",
+      "to": "costume",
+      "trigger": "получен MT-07",
+      "payload": [
+        "дата и время",
+        "ограничения по занятости актёров"
+      ],
+      "visibility": "clickup",
+      "format": "report"
+    },
+    {
+      "id": "MT-09",
+      "name": "Фиксация перемены после примерки",
+      "from": "costume",
+      "to": null,
+      "trigger": "примерка проведена",
+      "payload": [
+        "locked_at",
+        "wardrobe_ref",
+        "состав финальный"
+      ],
+      "visibility": "clickup",
+      "format": "report",
+      "rule": "после фиксации любое изменение — новая процедура"
+    },
+    {
+      "id": "MT-10",
+      "name": "Утверждение КПП",
+      "from": "producer",
+      "to": "first_ad",
+      "trigger": "все цеха подтвердили сроки",
+      "payload": [
+        "утверждённый календарно-постановочный план"
+      ],
+      "visibility": "clickup",
+      "format": "status_change",
+      "effect": "сроки готовности становятся обязательствами"
+    },
+    {
+      "id": "MT-11",
+      "name": "Запрос готовности на завтра",
+      "from": "first_ad",
+      "to": "costume",
+      "trigger": "расписание 17:30 накануне",
+      "payload": [
+        "сцены завтрашнего дня",
+        "перемены по персонажам"
+      ],
+      "expects": "MT-12",
+      "sla_minutes": 60,
+      "visibility": "clickup",
+      "format": "decision_request",
+      "classic": "обход цехов перед выпуском вызывного листа"
+    },
+    {
+      "id": "MT-12",
+      "name": "Подтверждение готовности цеха",
+      "from": "costume",
+      "to": "first_ad",
+      "trigger": "получен MT-11",
+      "payload": [
+        "готов: перечень сцен",
+        "не готов: сцена + причина + реальный срок"
+      ],
+      "visibility": "clickup",
+      "format": "flag",
+      "rule": "ответ строго бинарный, промежуточные формулировки невалидны"
+    },
+    {
+      "id": "MT-13",
+      "name": "Варианты продюсеру",
+      "from": "first_ad",
+      "to": "producer",
+      "trigger": "получен MT-12 с неготовностью",
+      "payload": [
+        "вариант A: перестановка, стоимость 0, кого двигает",
+        "вариант B: деньги, что разблокирует",
+        "рекомендация",
+        "дедлайн"
+      ],
+      "expects": "MT-14",
+      "visibility": "clickup",
+      "format": "decision_request",
+      "rule": "ассистент не тратит деньги и не решает — только предъявляет"
+    },
+    {
+      "id": "MT-14",
+      "name": "Решение по варианту",
+      "from": [
+        "producer",
+        "timur"
+      ],
+      "to": "first_ad",
+      "trigger": "получен MT-13",
+      "payload": [
+        "выбранный вариант",
+        "обоснование"
+      ],
+      "visibility": "clickup",
+      "format": "report"
+    },
+    {
+      "id": "MT-15",
+      "name": "Запрос approve стоимости",
+      "from": "producer",
+      "to": "timur",
+      "trigger": "оценка выше порога",
+      "payload": [
+        "сумма",
+        "порог",
+        "предмет расхода",
+        "correlation_key"
+      ],
+      "expects": "MT-16",
+      "visibility": "clickup",
+      "format": "decision_request",
+      "channel": "payment_workflow"
+    },
+    {
+      "id": "MT-16",
+      "name": "Approve стоимости",
+      "from": "timur",
+      "to": "producer",
+      "trigger": "получен MT-15",
+      "payload": [
+        "approved / rejected"
+      ],
+      "visibility": "clickup",
+      "format": "status_change",
+      "idempotent_by": "correlation_key"
+    },
+    {
+      "id": "MT-17",
+      "name": "Вызывной лист",
+      "from": "first_ad",
+      "to": "all",
+      "trigger": "готовность цехов собрана, 21:00 накануне",
+      "payload": [
+        "время общего вызова",
+        "время вызова костюмерного цеха",
+        "сцены по порядку",
+        "сценарные дни",
+        "перемены по персонажам",
+        "пометки под вопросом"
+      ],
+      "visibility": "clickup",
+      "format": "report",
+      "channel": "chat",
+      "classic": "выпускается накануне вечером, не утром"
+    },
+    {
+      "id": "MT-18",
+      "name": "Переиздание вызывного листа",
+      "from": "first_ad",
+      "to": "all",
+      "trigger": "решение по спорной сцене или изменение расписания",
+      "payload": [
+        "что изменилось",
+        "новый порядок",
+        "новые слоты",
+        "время на перемену"
+      ],
+      "visibility": "clickup",
+      "format": "report",
+      "classic": "amended call sheet"
+    },
+    {
+      "id": "MT-19",
+      "name": "Время на перемену",
+      "from": "costume",
+      "to": "first_ad",
+      "trigger": "формируется порядок съёмки",
+      "payload": [
+        "перемена",
+        "длительность в минутах"
+      ],
+      "visibility": "clickup",
+      "format": "report",
+      "rule": "перемена — элемент расписания, а не пауза между сценами"
+    },
+    {
+      "id": "MT-20",
+      "name": "Флаг непрерывности",
+      "from": "continuity",
+      "to": "costume",
+      "trigger": "расхождение с эталонным шотом",
+      "payload": [
+        "конфликтующий шот",
+        "сценарный день",
+        "предмет расхождения"
+      ],
+      "expects": "MT-21",
+      "visibility": "clickup",
+      "format": "flag",
+      "rule": "до приёмки, а не после"
+    },
+    {
+      "id": "MT-21",
+      "name": "Подтверждение расхождения и рекомендация",
+      "from": "costume",
+      "to": "supervisor",
+      "trigger": "получен MT-20",
+      "payload": [
+        "подтверждение / отклонение",
+        "эталонный референс",
+        "рекомендация"
+      ],
+      "expects": "MT-22",
+      "visibility": "clickup",
+      "format": "flag"
+    },
+    {
+      "id": "MT-22",
+      "name": "Правка поля брифа",
+      "from": [
+        "supervisor",
+        "producer"
+      ],
+      "to": "costume",
+      "trigger": "решение человека",
+      "payload": [
+        "поле",
+        "старое значение",
+        "новое значение"
+      ],
+      "visibility": "clickup",
+      "format": "field_change",
+      "rule": "применяется к следующему запуску, идущий проход не трогается"
+    },
+    {
+      "id": "MT-23",
+      "name": "Доп. расход",
+      "from": "costume",
+      "to": "producer",
+      "trigger": "порча костюма, срочное изготовление, дополнительный дубль",
+      "payload": [
+        "предмет",
+        "сумма",
+        "срочность"
+      ],
+      "visibility": "clickup",
+      "format": "report",
+      "routing": "выше порога → MT-15; ниже порога → в сводку"
+    },
+    {
+      "id": "MT-24",
+      "name": "Итог съёмочного дня",
+      "from": "first_ad",
+      "to": "all",
+      "trigger": "18:00",
+      "payload": [
+        "снято / план",
+        "решения по деньгам",
+        "флаги непрерывности",
+        "простой в ожидании человека",
+        "открытые блоки"
+      ],
+      "visibility": "clickup",
+      "format": "report",
+      "channel": "chat",
+      "classic": "production report"
+    },
+    {
+      "id": "MT-90",
+      "name": "Внутренний обмен агент ↔ агент",
+      "from": "any_agent",
+      "to": "any_agent",
+      "payload": [
+        "черновые проходы",
+        "ретраи",
+        "технические переговоры",
+        "оценки до запуска"
+      ],
+      "visibility": "home",
+      "rule": "в ленту ClickUp не попадает ни при каких условиях"
+    }
+  ],
+  "filter_rules": {
+    "duplicates_to_clickup": [
+      "решение агента и его обоснование",
+      "готовый результат: версия, параметры, ссылка",
+      "запрос к человеку: варианты, рекомендация, дедлайн",
+      "проблема, требующая вмешательства",
+      "смена стадии производства",
+      "оценка стоимости выше порога",
+      "подтверждение готовности цеха",
+      "переиздание расписания"
+    ],
+    "stays_home": [
+      "внутренний обмен агент ↔ агент",
+      "промежуточные проходы генерации референса",
+      "развилки, снятые агентом самостоятельно",
+      "автоматически восстановленные сбои и ретраи",
+      "микросостояния внутри стадии",
+      "расчёты, уложившиеся в лимит",
+      "подбор вариантов внутри перемены"
+    ],
+    "three_formats": [
+      "Отчёт",
+      "Запрос решения",
+      "Флаг"
+    ]
+  },
+  "escalation_policies": [
+    {
+      "stage": "cost_approval",
+      "timeout_min": 30,
+      "action": "пауза",
+      "escalate_to": [
+        "timur"
+      ],
+      "channel": "production_daily",
+      "rationale": "деньги без человека не тратятся"
+    },
+    {
+      "stage": "regenerate",
+      "timeout_min": 20,
+      "action": "применить рекомендацию агента",
+      "escalate_to": [
+        "supervisor"
+      ]
+    },
+    {
+      "stage": "coverage_review",
+      "timeout_min": 30,
+      "action": "применить рекомендацию агента",
+      "escalate_to": [
+        "supervisor"
+      ]
+    },
+    {
+      "stage": "blocked",
+      "timeout_min": 240,
+      "action": "повторная эскалация",
+      "escalate_to": [
+        "producer",
+        "first_ad"
+      ],
+      "repeat": true
+    }
+  ],
+  "events": [
+    {
+      "seq": 1,
+      "id": "E001",
+      "ts": "2026-08-03T10:00:00+03:00",
+      "phase": "prep",
+      "mt": "MT-01",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Постановочный лист: 47 сцен, 4 сценарных дня, 4 персонажа. Предполагаемый порядок съёмки и окна занятости во вложении. Вера занята 06–22.08, Соня — только 12.08 и 19.08. Костюмный плот жду до 05.08.",
+      "attachments": [
+        "shooting_schedule_draft_v1.pdf",
+        "cast_availability.xlsx"
+      ],
+      "sla": {
+        "expects": "MT-02",
+        "due": "2026-08-05T18:00:00+03:00"
+      }
+    },
+    {
+      "seq": 2,
+      "id": "E002",
+      "ts": "2026-08-03T14:10:00+03:00",
+      "phase": "prep",
+      "mt": "MT-90",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "prod_designer"
+      ],
+      "channel": "agent_to_agent",
+      "visibility": "home",
+      "body": "Согласование общей палитры и фактур по локациям.",
+      "detail": "вне рамок демо"
+    },
+    {
+      "seq": 3,
+      "id": "E003",
+      "ts": "2026-08-04T11:30:00+03:00",
+      "phase": "prep",
+      "mt": "MT-90",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "director"
+      ],
+      "channel": "agent_to_agent",
+      "visibility": "home",
+      "body": "Эскизы перемен на утверждение, три итерации по Вере.",
+      "iterations": 3,
+      "detail": "вне рамок демо"
+    },
+    {
+      "seq": 4,
+      "id": "E004",
+      "ts": "2026-08-04T16:40:00+03:00",
+      "phase": "prep",
+      "mt": "MT-02",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E001",
+      "body": "Костюмный плот. 9 перемен на 4 персонажа, 15 единиц с учётом дублей. Разбивка: персонаж × сценарный день × перемена, по каждой — состав, дубли, дата готовности. Самая тяжёлая позиция — Вера/CH-03: три состояния износа, срок 12.08. Даты сообщаю как готовность цеха; в календарь ставите вы.",
+      "payload_ref": "costume_plot",
+      "attachments": [
+        "costume_plot_v1.xlsx"
+      ]
+    },
+    {
+      "seq": 5,
+      "id": "E005",
+      "ts": "2026-08-04T17:05:00+03:00",
+      "phase": "prep",
+      "mt": "MT-03",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "field_change",
+      "task": "PREP-COSTUME",
+      "visibility": "clickup",
+      "in_reply_to": "E004",
+      "body": "Даты готовности внесены в КПП как ограничение по 9 переменам. Сцена не может стоять раньше готовности перемены. Конфликтов с окнами актёров нет.",
+      "field_changes": [
+        {
+          "key": "wardrobe_ready_at",
+          "scope": "9 перемен",
+          "source": "costume_plot_v1"
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "id": "E006",
+      "ts": "2026-08-05T11:20:00+03:00",
+      "phase": "prep",
+      "mt": "MT-04",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "producer"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "decision_request",
+      "visibility": "clickup",
+      "body": "Смета костюмного цеха — 1 480 000 ₽. Изготовление 620 000 · аренда 180 000 · закупка 240 000 · дубли 290 000 · старение 90 000 · примерки 60 000. Крупнейшая статья дублей — CH-03 Веры, три состояния износа параллельной сборкой. Прошу утвердить до 18:00.",
+      "attachments": [
+        "costume_budget_v1.xlsx"
+      ],
+      "reply_deadline": "2026-08-05T18:00:00+03:00",
+      "field_changes": [
+        {
+          "key": "waiting_for_human",
+          "to": true
+        }
+      ],
+      "status_change": {
+        "to": "cost_approval"
+      }
+    },
+    {
+      "seq": 7,
+      "id": "E007",
+      "ts": "2026-08-05T12:00:00+03:00",
+      "phase": "prep",
+      "mt": "MT-05",
+      "actor": "producer",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E006",
+      "body": "Лимит цеха — 1 150 000 ₽. Режу дубли с 290 000 до 100 000, старение с 90 000 до 30 000, закупку до 220 000. Изготовление, аренду и примерки не трогаю. Последствия по готовности направьте первому ассистенту — расписание не моя зона.",
+      "decision": "cut",
+      "amount_cut": 330000,
+      "status_change": {
+        "to": "ready"
+      },
+      "field_changes": [
+        {
+          "key": "waiting_for_human",
+          "to": false
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "id": "E008",
+      "ts": "2026-08-05T15:30:00+03:00",
+      "phase": "prep",
+      "mt": "MT-06",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "flag",
+      "visibility": "clickup",
+      "in_reply_to": "E007",
+      "body": "Последствия урезания. Вера/CH-03: три дубля износа собираются последовательно, а не параллельно, — готовность сдвигается с 12.08 на 14.08. Старение переводится на генеративное, требует суток калибровки. Вера/CH-01 теряет один дубль из двух — риск при сцене с едой. Остальные семь перемен без изменений.",
+      "field_changes": [
+        {
+          "key": "wardrobe_ready_at",
+          "task": "SC-042/09",
+          "from": "2026-08-12",
+          "to": "2026-08-14"
+        },
+        {
+          "key": "doubles_available",
+          "scope": "Вера/CH-01",
+          "from": 2,
+          "to": 1
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "id": "E009",
+      "ts": "2026-08-05T16:15:00+03:00",
+      "phase": "prep",
+      "mt": "MT-03",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "field_change",
+      "task": "SC-042/09",
+      "visibility": "clickup",
+      "in_reply_to": "E008",
+      "body": "Принял. SC-042/09 переставить внутри блока некуда — SD-03 привязан к окну Сони 12.08. Ставлю сцену на 12.08 с пометкой «под риском», решать будем по факту готовности.",
+      "risk_flag": true
+    },
+    {
+      "seq": 10,
+      "id": "E010",
+      "ts": "2026-08-06T09:15:00+03:00",
+      "phase": "prep",
+      "mt": "MT-07",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "decision_request",
+      "visibility": "clickup",
+      "body": "Заявка на примерку. Вера — CH-01, CH-02, CH-04, 90 мин. Аркадий — CH-01, CH-02, CH-03, 60 мин. Нина — CH-01, 25 мин. CH-03 Веры на примерку не выношу, не готова. Прошу окно.",
+      "reply_deadline": "2026-08-06T18:00:00+03:00"
+    },
+    {
+      "seq": 11,
+      "id": "E011",
+      "ts": "2026-08-06T09:40:00+03:00",
+      "phase": "prep",
+      "mt": "MT-08",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E010",
+      "body": "07.08, 14:00–17:00. Вера с 14:00, Аркадий с 15:10, Нина с 16:30. Учтите: у Аркадия в 16:00 проба на камеру, пересечение недопустимо.",
+      "mentions_out_of_scope": [
+        "camera"
+      ]
+    },
+    {
+      "seq": 12,
+      "id": "E012",
+      "ts": "2026-08-07T16:20:00+03:00",
+      "phase": "prep",
+      "mt": "MT-09",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "field_change",
+      "task": "PREP-COSTUME",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Примерка проведена. Зафиксированы: Вера/CH-01, CH-02; Аркадий/CH-01, CH-02, CH-03; Нина/CH-01. Вера/CH-04 доработка по длине, фиксация 10.08. Вера/CH-03 не фиксируется — не готова. По зафиксированным перемены заперты: изменение состава теперь новая процедура, а не правка.",
+      "field_changes": [
+        {
+          "key": "wardrobe_ref",
+          "locked": true,
+          "scope": [
+            "Вера/CH-01",
+            "Вера/CH-02",
+            "Аркадий/CH-01",
+            "Аркадий/CH-02",
+            "Аркадий/CH-03",
+            "Нина/CH-01"
+          ]
+        }
+      ],
+      "mentions_out_of_scope": [
+        "camera",
+        "makeup"
+      ]
+    },
+    {
+      "seq": 13,
+      "id": "E013",
+      "ts": "2026-08-07T17:10:00+03:00",
+      "phase": "prep",
+      "mt": "MT-19",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "task_comment",
+      "task": "PREP-COSTUME",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Длительность перемен для расписания: Вера CH-01→CH-02 — 15 мин, CH-02→CH-03 — 25 мин (грим согласован), CH-03→CH-04 — 20 мин. Аркадий CH-01→CH-02 — 12 мин. Нина без перемен. Закладывайте в порядок съёмки, это работа, а не пауза.",
+      "field_changes": [
+        {
+          "key": "change_duration_min",
+          "scope": "4 перехода"
+        }
+      ]
+    },
+    {
+      "seq": 14,
+      "id": "E014",
+      "ts": "2026-08-07T18:00:00+03:00",
+      "phase": "prep",
+      "mt": "MT-10",
+      "actor": "producer",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "status_change",
+      "task": "PREP-COSTUME",
+      "visibility": "clickup",
+      "body": "КПП утверждён. Сроки готовности костюма с этого момента — обязательства, а не оценки.",
+      "status_change": {
+        "to": "accepted"
+      }
+    },
+    {
+      "seq": 15,
+      "id": "E016",
+      "ts": "2026-08-10T14:20:00+03:00",
+      "phase": "prep",
+      "actor": "supervisor",
+      "actor_type": "human",
+      "channel": "status_change",
+      "task": "SC-039/03",
+      "visibility": "clickup",
+      "body": "Accepted. Вера/CH-02, сид 41207 — эталон по SD-02.",
+      "status_change": {
+        "to": "accepted"
+      },
+      "sets_continuity_master": true
+    },
+    {
+      "seq": 16,
+      "id": "E015",
+      "ts": "2026-08-10T15:00:00+03:00",
+      "phase": "prep",
+      "mt": "MT-09",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "field_change",
+      "task": "PREP-COSTUME",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Вера/CH-04 доработана и зафиксирована. Восемь перемен из девяти заперты. Открыта одна — CH-03, срок 14.08.",
+      "field_changes": [
+        {
+          "key": "wardrobe_ref",
+          "locked": true,
+          "scope": [
+            "Вера/CH-04"
+          ]
+        }
+      ]
+    },
+    {
+      "seq": 17,
+      "id": "E017",
+      "ts": "2026-08-11T09:00:00+03:00",
+      "phase": "prep",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "status_change",
+      "task": "SC-041/02",
+      "visibility": "clickup",
+      "body": "SC-041/02 → Blocked. Локация сменилась, промпт не переутверждён. Ждём продюсера.",
+      "status_change": {
+        "to": "blocked"
+      },
+      "field_changes": [
+        {
+          "key": "waiting_for_human",
+          "to": true
+        }
+      ]
+    },
+    {
+      "seq": 18,
+      "id": "E018",
+      "ts": "2026-08-11T12:30:00+03:00",
+      "phase": "prep",
+      "mt": "MT-09",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "field_change",
+      "task": "SC-043/01",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Соня/CH-01 зафиксирована. Перемен в сцене нет, комплект один.",
+      "field_changes": [
+        {
+          "key": "wardrobe_ref",
+          "task": "SC-043/01",
+          "to": "s3://wardrobe/sonya_ch01_v1.png",
+          "locked": true
+        }
+      ]
+    },
+    {
+      "seq": 19,
+      "id": "E019",
+      "ts": "2026-08-11T17:30:00+03:00",
+      "phase": "eve_before",
+      "mt": "MT-11",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "chat",
+      "chat_channel": "costume_dept",
+      "format": "decision_request",
+      "visibility": "clickup",
+      "body": "Обход цехов перед вызывным листом на 12.08. Сцены: SC-042/07 (SD-02, Вера CH-02 + Аркадий CH-02), SC-042/08 (SD-02, Вера CH-02), SC-040/05 (SD-02, Нина CH-01 + Вера CH-02), SC-043/01 (SD-03, Соня CH-01), SC-042/09 (SD-03, Вера CH-03). Подтвердите готовность до 18:30.",
+      "reply_deadline": "2026-08-11T18:30:00+03:00"
+    },
+    {
+      "seq": 20,
+      "id": "E020",
+      "ts": "2026-08-11T18:10:00+03:00",
+      "phase": "eve_before",
+      "mt": "MT-12",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "chat",
+      "chat_channel": "costume_dept",
+      "format": "flag",
+      "visibility": "clickup",
+      "in_reply_to": "E019",
+      "body": "Готов: SC-042/07, SC-042/08, SC-040/05, SC-043/01. Не готов: SC-042/09 — Вера/CH-03, три состояния износа, реальный срок 14.08. Причина — последовательная сборка дублей после урезания сметы от 05.08.",
+      "readiness": {
+        "ready": [
+          "SC-042/07",
+          "SC-042/08",
+          "SC-040/05",
+          "SC-043/01"
+        ],
+        "not_ready": [
+          {
+            "task": "SC-042/09",
+            "reason": "CH-03 в производстве",
+            "real_date": "2026-08-14"
+          }
+        ]
+      },
+      "demo_case": "бинарное подтверждение готовности"
+    },
+    {
+      "seq": 21,
+      "id": "E021",
+      "ts": "2026-08-11T18:40:00+03:00",
+      "phase": "eve_before",
+      "mt": "MT-13",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "to": [
+        "producer"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "format": "decision_request",
+      "visibility": "clickup",
+      "in_reply_to": "E020",
+      "body": "Два варианта по SC-042/09. A — перестановка на 14.08, деньги 0, двигает SC-043/01 на 15.08. B — срочное изготовление CH-03, 96 000 ₽, снимаем 12.08 в дневном блоке. Рекомендую A: сумма выше порога, а сцена не срочная. Риск варианта A — окно Сони 12.08 и 19.08, второе окно ломает график Веры. Дедлайн ответа 21:00.",
+      "options": [
+        {
+          "id": "A",
+          "cost": 0,
+          "impact": "SC-042/09 → 14.08; SC-043/01 → 15.08",
+          "risk": "окно Сони"
+        },
+        {
+          "id": "B",
+          "cost": 96000,
+          "impact": "SC-042/09 → 12.08, дневной блок",
+          "risk": "выше порога 50 000 ₽"
+        }
+      ],
+      "recommendation": "A",
+      "reply_deadline": "2026-08-11T21:00:00+03:00",
+      "status_change": {
+        "to": "cost_approval"
+      },
+      "field_changes": [
+        {
+          "key": "waiting_for_human",
+          "to": true
+        }
+      ]
+    },
+    {
+      "seq": 22,
+      "id": "E022",
+      "ts": "2026-08-11T21:01:00+03:00",
+      "phase": "eve_before",
+      "actor": "system",
+      "actor_type": "system",
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "flag",
+      "visibility": "clickup",
+      "in_reply_to": "E021",
+      "body": "Дедлайн 21:00 прошёл, ответа нет. Политика молчания для Cost Approval — пауза: деньги без человека не тратятся. Эскалация @Тимур, @Супервайзер. Вызывной лист выпускается с пометкой по SC-042/09.",
+      "demo_case": "человек не ответил",
+      "policy_applied": "pause",
+      "wait_started": "2026-08-11T21:01:00+03:00"
+    },
+    {
+      "seq": 23,
+      "id": "E023",
+      "ts": "2026-08-11T21:15:00+03:00",
+      "phase": "eve_before",
+      "mt": "MT-17",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Вызывной лист, СД-04, 12.08. Костюмерный цех — 07:00, грим — 07:30, общий вызов — 08:30. Порядок: 08:55 SC-042/07 (SD-02) · 09:30 SC-042/08 (SD-02) · 10:30 SC-040/05 (SD-02) · 12:30 SC-043/01 (SD-03) · SC-042/09 (SD-03) — ПОД ВОПРОСОМ, ждём решения. Перемены: Вера CH-02 весь блок SD-02, переход на CH-03 — 25 мин, если сцена состоится. Открытый блок дня: SC-041/02.",
+      "digest": true,
+      "attachments": [
+        "call_sheet_SD04_v1.pdf"
+      ],
+      "pending_items": [
+        "SC-042/09"
+      ]
+    },
+    {
+      "seq": 24,
+      "id": "E024",
+      "ts": "2026-08-11T21:40:00+03:00",
+      "phase": "eve_before",
+      "mt": "MT-90",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "makeup"
+      ],
+      "channel": "agent_to_agent",
+      "visibility": "home",
+      "body": "Сверка состояний по SD-02 и SD-03, синхронизация степени износа с гримом.",
+      "detail": "вне рамок демо"
+    },
+    {
+      "seq": 25,
+      "id": "E025",
+      "ts": "2026-08-12T06:50:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "chat",
+      "chat_channel": "costume_dept",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Цех на месте. Комплектация по вызывному листу проверена: Вера CH-02 — два дубля, Аркадий CH-02 — два дубля, Нина CH-01 — один, Соня CH-01 — один. CH-03 остаётся в производстве, срок прежний.",
+      "checklist_ok": true
+    },
+    {
+      "seq": 26,
+      "id": "E026",
+      "ts": "2026-08-12T07:00:00+03:00",
+      "phase": "shoot",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Утренний дайджест СД-04. В работе 4 сцены, под вопросом 1 — SC-042/09, ждём решения с 21:00 вчера, простой 10 ч. Открытый блок 1 — SC-041/02. Костюм подтвердил готовность по четырём сценам.",
+      "digest": true,
+      "metrics_snapshot": {
+        "in_work": 4,
+        "pending_decision": 1,
+        "blocked": 1,
+        "human_wait_minutes": 600
+      }
+    },
+    {
+      "seq": 27,
+      "id": "E027",
+      "ts": "2026-08-12T08:44:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-14",
+      "actor": "timur",
+      "actor_type": "human",
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "visibility": "clickup",
+      "in_reply_to": "E021",
+      "body": "Вариант B. Двигать SC-043/01 не будем — у Сони следующее окно 19.08, это ломает Веру. Плачу 96 000.",
+      "decision": "B",
+      "overrides_recommendation": "A",
+      "response_latency_min": 583
+    },
+    {
+      "seq": 28,
+      "id": "E028",
+      "ts": "2026-08-12T08:45:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-15",
+      "actor": "producer",
+      "actor_type": "agent",
+      "to": [
+        "timur"
+      ],
+      "channel": "payment_workflow",
+      "chat_channel": "money",
+      "task": "SC-042/09",
+      "format": "decision_request",
+      "visibility": "clickup",
+      "in_reply_to": "E027",
+      "body": "Срочное изготовление Вера/CH-03 — 96 000 ₽. Порог по сцене 50 000 ₽, превышение 46 000 ₽. Отправил на approve @Тимур.",
+      "correlation_key": "pay-SC042-09-ch03-urgent",
+      "amount": 96000,
+      "threshold": 50000,
+      "status_change": {
+        "to": "cost_approval"
+      }
+    },
+    {
+      "seq": 29,
+      "id": "E029",
+      "ts": "2026-08-12T08:47:12+03:00",
+      "phase": "shoot",
+      "mt": "MT-16",
+      "actor": "timur",
+      "actor_type": "human",
+      "channel": "payment_workflow",
+      "task": "SC-042/09",
+      "visibility": "clickup",
+      "in_reply_to": "E028",
+      "body": "approved",
+      "correlation_key": "pay-SC042-09-ch03-urgent",
+      "effect": "разблокировка производства"
+    },
+    {
+      "seq": 30,
+      "id": "E030",
+      "ts": "2026-08-12T08:47:19+03:00",
+      "phase": "shoot",
+      "mt": "MT-16",
+      "actor": "timur",
+      "actor_type": "human",
+      "channel": "payment_workflow",
+      "task": "SC-042/09",
+      "visibility": "clickup",
+      "in_reply_to": "E028",
+      "body": "approved",
+      "correlation_key": "pay-SC042-09-ch03-urgent",
+      "deduplicated": true,
+      "dedup_window_sec": 900,
+      "generations_triggered": 0,
+      "demo_case": "идемпотентность",
+      "render_hint": "погашенное дублирующее событие, серым, со счётчиком «1 из 1 генераций»"
+    },
+    {
+      "seq": 31,
+      "id": "E031",
+      "ts": "2026-08-12T08:50:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-18",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E029",
+      "body": "Вызывной лист переиздан, версия 2. SC-042/09 снимается сегодня, слот 15:40. Порядок дня: 08:55 SC-042/07 · 09:30 SC-042/08 · 10:30 SC-040/05 · 12:30 SC-043/01 · 15:15 перемена CH-02 → CH-03, 25 мин · 15:40 SC-042/09. Пометка «под вопросом» снята.",
+      "attachments": [
+        "call_sheet_SD04_v2.pdf"
+      ],
+      "field_changes": [
+        {
+          "key": "shoot_slot",
+          "task": "SC-042/09",
+          "to": "2026-08-12T15:40:00+03:00"
+        },
+        {
+          "key": "waiting_for_human",
+          "task": "SC-042/09",
+          "to": false
+        }
+      ]
+    },
+    {
+      "seq": 32,
+      "id": "E032",
+      "ts": "2026-08-12T08:51:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E031",
+      "body": "Срок 15:40 принят. Вера/CH-03: три состояния — мокрый, мокрый+грязный, порванный+грязный. Старение привязано к SD-03, точка отсчёта — состояние CH-02 в SC-039/03. Запускаю приоритетную сборку.",
+      "status_change": {
+        "to": "wardrobe_check"
+      },
+      "field_changes": [
+        {
+          "key": "costume_state",
+          "task": "SC-042/09",
+          "to": "порванный+грязный"
+        },
+        {
+          "key": "doubles_available",
+          "task": "SC-042/09",
+          "to": 3
+        }
+      ]
+    },
+    {
+      "seq": 33,
+      "id": "E033",
+      "ts": "2026-08-12T08:52:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-90",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "cost"
+      ],
+      "channel": "agent_to_agent",
+      "visibility": "home",
+      "body": "Оценка прохода до запуска, укладывается в лимит — эскалация не требуется.",
+      "within_limit": true,
+      "detail": "вне рамок демо"
+    },
+    {
+      "seq": 34,
+      "id": "E034",
+      "ts": "2026-08-12T08:55:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-042/07",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "SC-042/07: Вера/CH-02 и Аркадий/CH-02 зафиксированы на примерке 07.08, референсы заперты, дубли в наличии. Готов к генерации. @Actor · Disciple_Ivanov",
+      "status_change": {
+        "to": "in_generation"
+      },
+      "mentions": [
+        "actor_disciple"
+      ]
+    },
+    {
+      "seq": 35,
+      "id": "E035",
+      "ts": "2026-08-12T08:58:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-90",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "actor_disciple"
+      ],
+      "channel": "agent_to_agent",
+      "visibility": "home",
+      "body": "Параметры генерации, черновые проходы, два ретрая по фактуре шарфа.",
+      "retries": 2,
+      "recovered": true,
+      "detail": "вне рамок демо"
+    },
+    {
+      "seq": 36,
+      "id": "E036",
+      "ts": "2026-08-12T09:12:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E032",
+      "body": "Готово: Вера/CH-03, референс v1, три состояния износа собраны. Факт 94 200 ₽ из одобренных 96 000. Перемена будет готова к 15:40.",
+      "field_changes": [
+        {
+          "key": "wardrobe_ref",
+          "task": "SC-042/09",
+          "to": "s3://wardrobe/vera_ch03_v1.png"
+        },
+        {
+          "key": "wardrobe_ready_at",
+          "task": "SC-042/09",
+          "from": "2026-08-14",
+          "to": "2026-08-12"
+        },
+        {
+          "key": "cost_actual",
+          "task": "SC-042/09",
+          "to": 94200
+        }
+      ]
+    },
+    {
+      "seq": 37,
+      "id": "E037",
+      "ts": "2026-08-12T09:20:00+03:00",
+      "phase": "shoot",
+      "actor": "supervisor",
+      "actor_type": "human",
+      "channel": "status_change",
+      "task": "SC-042/07",
+      "visibility": "clickup",
+      "body": "Accepted. Костюм чистый, стыки со SC-039 в порядке.",
+      "status_change": {
+        "to": "accepted"
+      },
+      "demo_case": "happy path закрыт",
+      "cycle_time_min": 25
+    },
+    {
+      "seq": 38,
+      "id": "E038",
+      "ts": "2026-08-12T09:30:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-20",
+      "actor": "continuity",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/08",
+      "format": "flag",
+      "visibility": "clickup",
+      "body": "Оттенок пальто Веры в SC-042/08 расходится с SC-039/03. Сценарный день у обеих сцен — SD-02. Расхождение зафиксировано до приёмки.",
+      "conflicting_shot": "SC-039/03",
+      "story_day": "SD-02",
+      "delta": "оттенок и фактура воротника"
+    },
+    {
+      "seq": 39,
+      "id": "E039",
+      "ts": "2026-08-12T09:34:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-21",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "supervisor"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/08",
+      "format": "flag",
+      "visibility": "clickup",
+      "in_reply_to": "E038",
+      "body": "Подтверждаю. В поле стоит vera_ch02_v2_alt — альтернативный референс из подбора, не прошедший примерку. Эталон SD-02 — vera_ch02_v1, сид 41207, зафиксирован в SC-039/03. Перемена одна, сценарный день один — состояние обязано совпадать. Рекомендую Regenerate с эталонным референсом. @Супервайзер",
+      "recommendation": "regenerate",
+      "reference_master": "s3://wardrobe/vera_ch02_v1.png",
+      "mentions": [
+        "supervisor"
+      ],
+      "status_change": {
+        "to": "qc"
+      }
+    },
+    {
+      "seq": 40,
+      "id": "E040",
+      "ts": "2026-08-12T09:40:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-22",
+      "actor": "supervisor",
+      "actor_type": "human",
+      "channel": "field_change",
+      "task": "SC-042/08",
+      "visibility": "clickup",
+      "in_reply_to": "E039",
+      "body": "Меняю Wardrobe ref на эталон, ставлю Regenerate. Альтернативный референс убрать из подбора по SD-02.",
+      "field_changes": [
+        {
+          "key": "wardrobe_ref",
+          "from": "s3://wardrobe/vera_ch02_v2_alt.png",
+          "to": "s3://wardrobe/vera_ch02_v1.png"
+        }
+      ],
+      "status_change": {
+        "to": "regenerate"
+      }
+    },
+    {
+      "seq": 41,
+      "id": "E041",
+      "ts": "2026-08-12T09:41:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-042/08",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E040",
+      "body": "Правка принята, применяется к следующему запуску. Идущий проход не трогаю — он завершится и будет отброшен.",
+      "demo_case": "правка поля брифа не переписывает текущую генерацию",
+      "applies_from": "next_run"
+    },
+    {
+      "seq": 42,
+      "id": "E042",
+      "ts": "2026-08-12T10:05:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-042/08",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Готово: v2, сид 41207 — совпадает с SC-039/03. Расхождение по SD-02 снято.",
+      "field_changes": [
+        {
+          "key": "version",
+          "to": "v2"
+        },
+        {
+          "key": "seed",
+          "to": "41207"
+        },
+        {
+          "key": "cost_actual",
+          "to": 12800
+        }
+      ],
+      "status_change": {
+        "to": "qc"
+      }
+    },
+    {
+      "seq": 43,
+      "id": "E043",
+      "ts": "2026-08-12T10:12:00+03:00",
+      "phase": "shoot",
+      "actor": "supervisor",
+      "actor_type": "human",
+      "channel": "status_change",
+      "task": "SC-042/08",
+      "visibility": "clickup",
+      "body": "Accepted.",
+      "status_change": {
+        "to": "accepted"
+      },
+      "cycle_time_min": 42,
+      "rework": true
+    },
+    {
+      "seq": 44,
+      "id": "E044",
+      "ts": "2026-08-12T10:30:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-040/05",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "SC-040/05: Нина/CH-01 и Вера/CH-02 — обе заперты, состояния совпадают с SD-02. Перемена Веры не требуется, продолжаем в том же комплекте. Готов.",
+      "status_change": {
+        "to": "in_generation"
+      }
+    },
+    {
+      "seq": 45,
+      "id": "E045",
+      "ts": "2026-08-12T10:55:00+03:00",
+      "phase": "shoot",
+      "actor": "supervisor",
+      "actor_type": "human",
+      "channel": "status_change",
+      "task": "SC-040/05",
+      "visibility": "clickup",
+      "body": "Accepted.",
+      "status_change": {
+        "to": "accepted"
+      },
+      "cycle_time_min": 25
+    },
+    {
+      "seq": 46,
+      "id": "E046",
+      "ts": "2026-08-12T11:00:00+03:00",
+      "phase": "shoot",
+      "actor": "system",
+      "actor_type": "system",
+      "channel": "system",
+      "visibility": "home",
+      "body": "ClickUp недоступен. Производство продолжается, трансляция уходит в очередь с подтверждением.",
+      "demo_case": "ClickUp недоступен",
+      "outage": {
+        "from": "2026-08-12T11:00:00+03:00",
+        "to": "2026-08-12T11:04:00+03:00",
+        "duration_sec": 240
+      }
+    },
+    {
+      "seq": 47,
+      "id": "E047",
+      "ts": "2026-08-12T11:01:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-043/01",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Соня/CH-01 подтверждена, перемена не требуется, ранец в комплекте.",
+      "delivery": {
+        "status": "queued_then_delivered",
+        "queued_at": "2026-08-12T11:01:00+03:00",
+        "delivered_at": "2026-08-12T11:04:10+03:00",
+        "queue_position": 1,
+        "latency_sec": 190
+      }
+    },
+    {
+      "seq": 48,
+      "id": "E048",
+      "ts": "2026-08-12T11:02:30+03:00",
+      "phase": "shoot",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-043/01",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "SC-043/01 выходит на площадку в 12:30, порядок дня без изменений.",
+      "delivery": {
+        "status": "queued_then_delivered",
+        "queued_at": "2026-08-12T11:02:30+03:00",
+        "delivered_at": "2026-08-12T11:04:11+03:00",
+        "queue_position": 2,
+        "latency_sec": 101
+      }
+    },
+    {
+      "seq": 49,
+      "id": "E049",
+      "ts": "2026-08-12T11:03:40+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "CH-03: третий дубль износа собран, все три состояния готовы к 15:40.",
+      "delivery": {
+        "status": "queued_then_delivered",
+        "queued_at": "2026-08-12T11:03:40+03:00",
+        "delivered_at": "2026-08-12T11:04:12+03:00",
+        "queue_position": 3,
+        "latency_sec": 32
+      }
+    },
+    {
+      "seq": 50,
+      "id": "E050",
+      "ts": "2026-08-12T11:04:12+03:00",
+      "phase": "shoot",
+      "actor": "system",
+      "actor_type": "system",
+      "channel": "system",
+      "visibility": "clickup",
+      "body": "Связь восстановлена. 3 события досланы в исходном порядке, дублей нет.",
+      "demo_case": "очередь досылается в исходном порядке",
+      "delivered_count": 3,
+      "duplicates": 0
+    },
+    {
+      "seq": 51,
+      "id": "E051",
+      "ts": "2026-08-12T12:30:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-043/01",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "SC-043/01 готов к генерации, комплект Сони на площадке.",
+      "status_change": {
+        "to": "in_generation"
+      }
+    },
+    {
+      "seq": 52,
+      "id": "E052",
+      "ts": "2026-08-12T12:55:00+03:00",
+      "phase": "shoot",
+      "actor": "supervisor",
+      "actor_type": "human",
+      "channel": "status_change",
+      "task": "SC-043/01",
+      "visibility": "clickup",
+      "body": "Accepted.",
+      "status_change": {
+        "to": "accepted"
+      },
+      "cycle_time_min": 25
+    },
+    {
+      "seq": 53,
+      "id": "E053",
+      "ts": "2026-08-12T13:00:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-23",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "producer"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/07",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Доп. расход: куртка Аркадия/CH-02 порвана на дубле, второй дубль в работе. Нужен третий — 38 000 ₽. Ниже порога 50 000 ₽, блокировки нет, но фиксирую: остаётся один дубль на весь блок SD-02.",
+      "amount": 38000,
+      "threshold": 50000,
+      "escalated": false,
+      "demo_case": "расход ниже порога идёт в сводку, не в решение",
+      "field_changes": [
+        {
+          "key": "doubles_available",
+          "scope": "Аркадий/CH-02",
+          "from": 2,
+          "to": 1
+        }
+      ]
+    },
+    {
+      "seq": 54,
+      "id": "E054",
+      "ts": "2026-08-12T13:05:00+03:00",
+      "phase": "shoot",
+      "actor": "producer",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/07",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E053",
+      "body": "Согласовано в рамках порога. Идёт в сводку дня, approve человека не требуется. Итого доп. расходы СД-04: 134 000 ₽.",
+      "running_total": 134000
+    },
+    {
+      "seq": 55,
+      "id": "E055",
+      "ts": "2026-08-12T14:20:00+03:00",
+      "phase": "shoot",
+      "actor": "system",
+      "actor_type": "system",
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Всплеск трансляции — 34 события за 3 мин. Приоритет отдан запросам к человеку и провалам, 12 отчётных сообщений схлопнуты в сводку.",
+      "demo_case": "лимит API",
+      "collapsed_count": 12,
+      "prioritized": [
+        "decision_request",
+        "flag"
+      ]
+    },
+    {
+      "seq": 56,
+      "id": "E056",
+      "ts": "2026-08-12T15:15:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-19",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Перемена Вера CH-02 → CH-03, старт 15:15, заложено 25 мин. Грим синхронизирован. SC-042/09 в 15:40.",
+      "mentions_out_of_scope": [
+        "makeup"
+      ]
+    },
+    {
+      "seq": 57,
+      "id": "E057",
+      "ts": "2026-08-12T15:37:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "format": "report",
+      "visibility": "clickup",
+      "in_reply_to": "E056",
+      "body": "Перемена выполнена за 22 мин из 25. Состояние «порванный+грязный», дубль 3. Референс v1 в поле. Готовы снимать.",
+      "status_change": {
+        "to": "in_generation"
+      },
+      "actual_duration_min": 22,
+      "planned_duration_min": 25
+    },
+    {
+      "seq": 58,
+      "id": "E058",
+      "ts": "2026-08-12T16:05:00+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Готово: v1, сид 88213, модель gen-v4. Износ согласован с гримом по SD-03. Прокси в задаче, мастер в S3.",
+      "field_changes": [
+        {
+          "key": "version",
+          "to": "v1"
+        },
+        {
+          "key": "seed",
+          "to": "88213"
+        },
+        {
+          "key": "model",
+          "to": "gen-v4"
+        }
+      ],
+      "status_change": {
+        "to": "qc"
+      }
+    },
+    {
+      "seq": 59,
+      "id": "E059",
+      "ts": "2026-08-12T16:08:00+03:00",
+      "phase": "shoot",
+      "actor": "continuity",
+      "actor_type": "agent",
+      "channel": "task_comment",
+      "task": "SC-042/09",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Сверка по SD-03 пройдена. Степень износа согласуется с точкой отсчёта из SC-039/03, расхождений нет.",
+      "conflicts": 0
+    },
+    {
+      "seq": 60,
+      "id": "E060",
+      "ts": "2026-08-12T16:10:00+03:00",
+      "phase": "shoot",
+      "actor": "supervisor",
+      "actor_type": "human",
+      "channel": "status_change",
+      "task": "SC-042/09",
+      "visibility": "clickup",
+      "body": "Accepted. День закрыт по костюму.",
+      "status_change": {
+        "to": "accepted"
+      },
+      "cycle_time_min": 33
+    },
+    {
+      "seq": 61,
+      "id": "E061",
+      "ts": "2026-08-12T16:10:05+03:00",
+      "phase": "shoot",
+      "actor": "costume",
+      "actor_type": "agent",
+      "channel": "system",
+      "visibility": "home",
+      "body": "Событие приёмки отфильтровано по автору на входе в Stanislavsky — собственная реплика агента не возвращается как человеческая.",
+      "demo_case": "защита от эха",
+      "filtered": true,
+      "filter_rule": "author = agent_account",
+      "render_hint": "пунктирная стрелка с крестом на входе"
+    },
+    {
+      "seq": 62,
+      "id": "E062",
+      "ts": "2026-08-12T17:00:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-11",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "to": [
+        "costume"
+      ],
+      "channel": "chat",
+      "chat_channel": "costume_dept",
+      "format": "decision_request",
+      "visibility": "clickup",
+      "body": "Обход цехов на 13.08. Сцены: SC-044/01 (SD-04, Вера CH-04 + Аркадий CH-03), SC-041/02 (SD-01, Аркадий CH-01) — если разблокируют. Подтвердите готовность до 17:45.",
+      "reply_deadline": "2026-08-12T17:45:00+03:00"
+    },
+    {
+      "seq": 63,
+      "id": "E063",
+      "ts": "2026-08-12T17:20:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-12",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "first_ad"
+      ],
+      "channel": "chat",
+      "chat_channel": "costume_dept",
+      "format": "flag",
+      "visibility": "clickup",
+      "in_reply_to": "E062",
+      "body": "Готов: SC-044/01 — обе перемены заперты с 10.08. По SC-041/02 готов, но у Аркадия/CH-01 остался один дубль после сегодняшней порчи — при съёмке с едой риск. Рекомендую снимать в один заход.",
+      "readiness": {
+        "ready": [
+          "SC-044/01",
+          "SC-041/02"
+        ],
+        "risks": [
+          "Аркадий/CH-01 — один дубль"
+        ]
+      }
+    },
+    {
+      "seq": 64,
+      "id": "E064",
+      "ts": "2026-08-12T17:40:00+03:00",
+      "phase": "shoot",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "to": [
+        "producer"
+      ],
+      "channel": "task_comment",
+      "task": "SC-041/02",
+      "format": "decision_request",
+      "visibility": "clickup",
+      "body": "SC-041/02 висит в Blocked с 11.08, простой 32 ч. Нужна переутверждённая правка промпта после смены локации. Без неё сцена не встаёт в 13.08. Дедлайн 20:00.",
+      "reply_deadline": "2026-08-12T20:00:00+03:00",
+      "blocked_hours": 32
+    },
+    {
+      "seq": 65,
+      "id": "E065",
+      "ts": "2026-08-12T17:52:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-22",
+      "actor": "producer",
+      "actor_type": "agent",
+      "channel": "field_change",
+      "task": "SC-041/02",
+      "visibility": "clickup",
+      "in_reply_to": "E064",
+      "body": "Промпт переутверждён под новую локацию, костюм не меняется. Снимаю блок.",
+      "field_changes": [
+        {
+          "key": "prompt",
+          "changed": true
+        }
+      ],
+      "status_change": {
+        "to": "ready"
+      }
+    },
+    {
+      "seq": 66,
+      "id": "E066",
+      "ts": "2026-08-12T18:00:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-24",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Итог СД-04. Снято 5 из 5. Решений по деньгам — одно на 96 000 ₽, доп. расходов в пределах порога — 38 000 ₽. Флаг непрерывности один, снят до приёмки, стоил 42 мин переработки. Простой в ожидании человека — 10 ч 3 мин, из них 10 ч на ночное молчание по SC-042/09. Перемена CH-02 → CH-03 уложилась в план: 22 мин из 25. Блоков не осталось.",
+      "digest": true,
+      "metrics": {
+        "shots_planned": 5,
+        "shots_accepted": 5,
+        "human_wait_minutes": 603,
+        "escalations": 2,
+        "continuity_flags": 1,
+        "rework_shots": 1,
+        "open_blocks": 0,
+        "extra_cost_rub": 134000
+      }
+    },
+    {
+      "seq": 67,
+      "id": "E067",
+      "ts": "2026-08-12T18:20:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-17",
+      "actor": "first_ad",
+      "actor_type": "agent",
+      "channel": "chat",
+      "chat_channel": "production_daily",
+      "format": "report",
+      "visibility": "clickup",
+      "body": "Вызывной лист на 13.08, СД-05. Костюмерный цех — 07:30, общий вызов — 09:00. Порядок: 09:30 SC-044/01 (SD-04) · 11:30 SC-041/02 (SD-01). Перемена Вера CH-03 → CH-04 — 20 мин. Отметка цеха: Аркадий/CH-01 в одном дубле, снимаем в один заход.",
+      "attachments": [
+        "call_sheet_SD05_v1.pdf"
+      ]
+    },
+    {
+      "seq": 68,
+      "id": "E068",
+      "ts": "2026-08-12T18:35:00+03:00",
+      "phase": "shoot",
+      "mt": "MT-90",
+      "actor": "costume",
+      "actor_type": "agent",
+      "to": [
+        "conductor"
+      ],
+      "channel": "agent_to_agent",
+      "visibility": "home",
+      "body": "Постановка перемен на 13.08 в очередь производства, приоритеты и ретраи.",
+      "detail": "вне рамок демо"
+    }
+  ],
+  "demo_cases": {
+    "три_формата": {
+      "report": [
+        "E001",
+        "E004",
+        "E023",
+        "E036",
+        "E042",
+        "E066"
+      ],
+      "decision_request": [
+        "E006",
+        "E010",
+        "E019",
+        "E021",
+        "E028",
+        "E062",
+        "E064"
+      ],
+      "flag": [
+        "E008",
+        "E020",
+        "E038",
+        "E039",
+        "E063"
+      ]
+    },
+    "трёхсторонний_узел": {
+      "факт_от_цеха": "E020",
+      "варианты_от_ассистента": "E021",
+      "решение_человека": "E027",
+      "деньги": [
+        "E028",
+        "E029"
+      ],
+      "переиздание_расписания": "E031",
+      "исполнение": [
+        "E032",
+        "E036",
+        "E057",
+        "E058"
+      ]
+    },
+    "продюсер_переопределил_рекомендацию": {
+      "рекомендация": "A",
+      "решение": "B",
+      "events": [
+        "E021",
+        "E027"
+      ]
+    },
+    "костюмная_непрерывность": [
+      "E016",
+      "E038",
+      "E039",
+      "E040",
+      "E042",
+      "E059"
+    ],
+    "смета_и_последствия": [
+      "E006",
+      "E007",
+      "E008",
+      "E009"
+    ],
+    "примерка_и_фиксация": [
+      "E010",
+      "E011",
+      "E012",
+      "E015"
+    ],
+    "вызывной_лист_накануне": [
+      "E019",
+      "E020",
+      "E021",
+      "E022",
+      "E023"
+    ],
+    "идемпотентность": [
+      "E029",
+      "E030"
+    ],
+    "человек_не_ответил": [
+      "E021",
+      "E022",
+      "E026",
+      "E027"
+    ],
+    "clickup_недоступен": [
+      "E046",
+      "E047",
+      "E048",
+      "E049",
+      "E050"
+    ],
+    "лимит_api": [
+      "E055"
+    ],
+    "защита_от_эха": [
+      "E061"
+    ],
+    "правка_брифа_не_ломает_проход": [
+      "E040",
+      "E041",
+      "E042"
+    ],
+    "порог_стоимости": {
+      "выше": [
+        "E028",
+        "E029"
+      ],
+      "ниже": [
+        "E053",
+        "E054"
+      ]
+    },
+    "перемена_как_элемент_расписания": [
+      "E013",
+      "E056",
+      "E057"
+    ],
+    "остаётся_дома": [
+      "E002",
+      "E003",
+      "E024",
+      "E033",
+      "E035",
+      "E061",
+      "E068"
+    ],
+    "цикл_замкнулся": [
+      "E062",
+      "E063",
+      "E067"
+    ]
+  },
+  "metrics": {
+    "day": "2026-08-12",
+    "events_total": 68,
+    "events_in_clickup": 60,
+    "events_home_only": 8,
+    "by_actor": {
+      "first_ad": 16,
+      "costume": 31,
+      "producer": 5,
+      "supervisor": 7,
+      "system": 4,
+      "timur": 3,
+      "continuity": 2
+    },
+    "by_format": {
+      "report": 31,
+      "decision_request": 7,
+      "flag": 6,
+      "без_формата": 24
+    },
+    "human_touches": 10,
+    "human_wait_minutes": 603,
+    "longest_wait": {
+      "task": "SC-042/09",
+      "minutes": 583,
+      "from": "E021",
+      "to": "E027"
+    },
+    "shots_accepted": 5,
+    "rework_shots": 1,
+    "continuity_flags_before_acceptance": 1,
+    "continuity_flags_after_acceptance": 0,
+    "extra_cost_rub": 134000,
+    "cost_above_threshold_events": 1,
+    "outage_sec": 240,
+    "queued_events": 3,
+    "duplicates_suppressed": 1,
+    "echo_filtered": 1,
+    "events_with_status_change": 22,
+    "events_with_field_change": 18
+  },
+  "economics": {
+    "paid_seats": 8,
+    "free_service_agents": 3,
+    "clickup_automations_used": 0,
+    "plan_target": "Business Plus",
+    "bottleneck": "лимит API на трансляцию",
+    "note": "интеллект агентов в Stanislavsky, тариф с ClickUp Super Agents не требуется"
+  },
+  "visualization_hints": {
+    "swimlanes": [
+      {
+        "id": "costume",
+        "label": "Художник по костюмам",
+        "color": "#D96A9A"
+      },
+      {
+        "id": "first_ad",
+        "label": "Первый ассистент",
+        "color": "#8B84E8"
+      },
+      {
+        "id": "producer",
+        "label": "Продюсер",
+        "color": "#E0863C"
+      },
+      {
+        "id": "humans",
+        "label": "Люди",
+        "color": "#9A9A9A",
+        "members": [
+          "timur",
+          "supervisor"
+        ]
+      },
+      {
+        "id": "mentioned",
+        "label": "Прочие агенты",
+        "color": "#5F6B7A",
+        "members": [
+          "continuity",
+          "actor_disciple",
+          "cost",
+          "director",
+          "prod_designer",
+          "camera",
+          "makeup",
+          "conductor"
+        ]
+      }
+    ],
+    "edge_types": {
+      "clickup": "сплошная",
+      "home": "серая пунктирная, отдельным ярусом под лентой",
+      "filtered": "пунктир с крестом на конце",
+      "queued": "пунктир от ts до delivery.delivered_at, поверх заливки простоя",
+      "deduplicated": "серая, полупрозрачная, с крестом в узле"
+    },
+    "node_shapes": {
+      "report": "круг",
+      "decision_request": "ромб",
+      "flag": "треугольник",
+      "status_change": "квадрат",
+      "field_change": "квадрат с точкой",
+      "system": "шестиугольник"
+    },
+    "highlight_rules": [
+      "waiting_for_human = true — заливка ожидания до ответного события",
+      "demo_case ≠ null — обводка",
+      "overrides_recommendation — двойная обводка на узле решения"
+    ],
+    "time_axis": {
+      "prep": "03–10.08 сжимается в один блок с вехами MT-01…MT-10",
+      "eve_before": "11.08 17:30–21:15 разворачивается поминутно — здесь начинается главный конфликт",
+      "shoot": "12.08 06:50–18:35 поминутно",
+      "night_gap": "21:15–08:44 отрисовать разрывом с меткой простоя 10 ч 3 мин"
+    },
+    "recommended_views": [
+      "последовательность по времени с дорожками",
+      "граф сообщений по message_types",
+      "тепловая карта простоя по задачам",
+      "лента одной задачи SC-042/09 как в деке"
+    ]
+  }
+}

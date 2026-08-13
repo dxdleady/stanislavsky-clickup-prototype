@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" 2>/dev/null; py_n=$(git status --porcelain --untracked-files=all -- prototype 2>/dev/null | cut -c4- | grep -c '\\.py$'); docs_n=$(git status --porcelain --untracked-files=all -- docs 2>/dev/null | cut -c4- | grep -c '\\.md$'); if [ \"$py_n\" -ge 3 ] && [ \"$docs_n\" -eq 0 ]; then jq -n --arg reason \"В prototype/ незакоммиченных .py-файлов: $py_n, но ни одной правки в docs/. Перед тем как закончить — сверьтесь с docs/00-11 (особенно docs/11_live_demo_architecture.md) и обновите то, что разошлось с кодом.\" '{decision:\"block\", reason:$reason}'; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
