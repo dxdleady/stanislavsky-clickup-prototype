@@ -60,6 +60,46 @@ def test_extract_inbound_event_filters_echo_from_bot(monkeypatch):
     assert wh._extract_inbound_event(payload) is None  # docs/00_overview.md §5.1 anti-echo
 
 
+def test_extract_inbound_event_filters_echo_by_agent_label_prefix_when_bot_user_id_unset(monkeypatch):
+    """docs/06_open_questions.md В13 + docs/11_live_demo_architecture.md §3: во
+    время реального звонка BOT_USER_ID временно пуст (обходной путь для общего
+    с супервайзером аккаунта), поэтому author_id-фильтр выше выключен — без
+    этой проверки бот получал бы вебхук на свой же ответ и зациклился бы."""
+    monkeypatch.setitem(wh._real_id_to_label, "real1", "SC-042/09")
+    monkeypatch.setattr(wh.settings, "bot_user_id", None)
+    payload = {
+        "event": "taskCommentPosted",
+        "task_id": "real1",
+        "history_items": [
+            {
+                "id": "c1",
+                "user": {"id": "shared-account-id"},
+                "comment_text": f"{wh.AGENT_LABEL['costume']}: Правка принята, применяется к следующему запуску.",
+            }
+        ],
+    }
+    assert wh._extract_inbound_event(payload) is None
+
+
+def test_extract_inbound_event_real_human_text_not_mistaken_for_echo(monkeypatch):
+    monkeypatch.setitem(wh._real_id_to_label, "real1", "SC-042/09")
+    monkeypatch.setattr(wh.settings, "bot_user_id", None)
+    payload = {
+        "event": "taskCommentPosted",
+        "task_id": "real1",
+        "history_items": [
+            {
+                "id": "c1",
+                "user": {"id": "shared-account-id"},
+                "comment_text": "Accepted. Костюм чистый, стыки в порядке.",
+            }
+        ],
+    }
+    event = wh._extract_inbound_event(payload)
+    assert event is not None
+    assert event.body == "Accepted. Костюм чистый, стыки в порядке."
+
+
 def test_extract_inbound_event_happy_path(monkeypatch):
     monkeypatch.setitem(wh._real_id_to_label, "real1", "SC-042/09")
     monkeypatch.setattr(wh.settings, "bot_user_id", "999")

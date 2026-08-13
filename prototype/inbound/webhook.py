@@ -24,7 +24,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 
 from adapters.clickup import ClickUpTrackerAdapter
-from agents.live_demo_agent import react
+from agents.live_demo_agent import AGENT_LABEL, react
 from core.clock import RealClock
 from core.config import settings
 from core.events import InboundEvent
@@ -167,6 +167,16 @@ def _extract_inbound_event(payload: dict) -> InboundEvent | None:
     comment_text = _extract_comment_text(item)
     if not comment_text:
         logger.warning("не нашёл текст комментария в history_items[0]: %s", item)
+        return None
+
+    # ASSUMPTION(open_questions:В13): вторичный сигнал эха по текстовому префиксу
+    # агента — страхует именно тот случай, когда BOT_USER_ID временно пуст
+    # (обходной путь для звонка, см. docs/11_live_demo_architecture.md §3, из-за
+    # общего с супервайзером ClickUp-аккаунта, docs/06_open_questions.md В13):
+    # проверка по author_id выше в этом режиме выключена, и без этого сигнала
+    # бот получил бы вебхук на собственный ответ и мог зациклиться.
+    if any(comment_text.startswith(label) for label in AGENT_LABEL.values()):
+        logger.info("текст начинается с префикса агента — вероятное эхо собственного ответа")
         return None
 
     comment_id = _extract_comment_id(item)
