@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from core.events import AgentEvent, DeliveryResult, LinkedTaskRequest, Stage
 
@@ -15,12 +15,22 @@ from core.events import AgentEvent, DeliveryResult, LinkedTaskRequest, Stage
 __all__ = ["DeliveryResult", "TrackerAdapter"]
 
 
+@runtime_checkable
 class TrackerAdapter(Protocol):
+    """Structural typing — реализации (adapters/clickup.py, adapters/memory.py)
+    НЕ наследуются отсюда, см. CLAUDE.md. `@runtime_checkable` позволяет
+    `isinstance(adapter, TrackerAdapter)` — проверяет наличие методов (не
+    сигнатур: аргументы/типы isinstance не сверяет), используется в
+    tests/test_tracker_adapter_contract.py как быстрый сигнал о забытом
+    методе. Сигнатуры и поведение проверяет сам contract-test-suite там же."""
+
     def publish(self, event: AgentEvent) -> DeliveryResult: ...
 
     def create_linked_task(self, request: LinkedTaskRequest) -> str: ...
 
     def get_linked_workflow_task(self, task_id: str, workflow_kind: str) -> str | None: ...
+
+    def get_status(self, task_id: str) -> Stage | None: ...
 
     def post_comment(self, task_id: str, body: str) -> str: ...
 
